@@ -1,29 +1,26 @@
-class Player extends BasePlayer {
+class ExamplePlayer extends BasePlayer {
     static INITIALIZE = 0;
     static GO         = 1;
     static NEXT_OBJEC = 2;
     static BONK       = 3;
     static RESPAWN    = 4;
 
+    // you can also customize its initial position and angle 
+    // by giving location in pixel, and angle in degree
+    // see baseplayer.js for detail
     constructor(color) {
+        // call baseplayer constructor
         super(color);
-        this.status = Player.INITIALIZE;
+        this.status = ExamplePlayer.INITIALIZE;
     }
 
     bonk() {
-        this.status = Player.BONK;
+        this.status = ExamplePlayer.BONK;
     }
 
     respawn() {
         this.setAngle(10, 0);
         this.setSpeed(1);
-    }
-
-    suspend(ms) {
-        var target = Date.now() + ms;
-        while (Date.now() != target) { 
-            this.render(); 
-        }
     }
 
     initialize() {
@@ -32,37 +29,33 @@ class Player extends BasePlayer {
     }
 
     getPuzzle() {
-        // console.log("Earning bytecoins!", this.bytecoin);
         this.submitPuzzle();
     }
 
     repeat() {
-        // this.setSpeed(1);
-        this.requestPuzzle();
+        this.preparePuzzle();
         switch (this.status) {
-            case Player.INITIALIZE:
-                // console.log("At initialization");
-                this.requestPuzzle();
+            case ExamplePlayer.INITIALIZE:
+                this.preparePuzzle();
                 this.shootUDP();
                 break;
-            case Player.GO:
-                // console.log("At stage go");
+
+            case ExamplePlayer.GO:
                 this.setAngle(120, 1);
                 this.setSpeed(0);
                 this.shootUDP();
-                // this.setSpeed(1);
                 break;
-            case Player.NEXT_OBJEC:
-                // console.log("At stage find next object");
+
+            case ExamplePlayer.NEXT_OBJEC:
                 this.setSpeed(0);
                 break;
-            case Player.BONK:
-                // console.log("At stage bonk");
+
+            case ExamplePlayer.BONK:
                 this.wait(20, () => {
                     this.setSpeed(-2);
                     this.wait(600, () => {
                         this.wait(100, () => {
-                            this.status = Player.GO;
+                            this.status = ExamplePlayer.GO;
                         })
                     });
                 });

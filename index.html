@@ -17,33 +17,42 @@
         <canvas id="background" height="800" width="800"></canvas>
         <canvas id="activeLayer" height="800" width="800"></canvas>
         <script type="text/javascript" charset="utf-8">
+            // basic game setting
             const PLAYERS_NUM       = 2;
             const HOSTS_NUM         = 10;
             const GRID_NUM          = 40;
             const CANVAS_SIZE       = 800;
             const GRID_SIZE         = CANVAS_SIZE / GRID_NUM;
             
+            // hinder settings
             const HINDER_AREA_LEN   = 4;
             const HINDER_AREA_SIZE  = GRID_SIZE * HINDER_AREA_LEN;
             const HINDER_COLOR      = "black";
 
+            // player settings
             const PLAYER_SIZE       = GRID_SIZE / 2;
             const PLAYER_HIT_SCORE  = 15;
             const HOST_HIT_SCORE    = 1;
 
+            // player weapon setting
             const UDP_COST          = 50;
             const SCANNER_COST      = 1;
 
+            // puzzle solve reward
             const PUZZLE_REWARD     = 50;
 
+            // scene setting
             const EMPTY_GROUND      = 0;
-            const WALL              = 1;
-            const NEUTRAL_MUSK      = 2;
-            const FRIENDLY_MUSK     = 4;
-            const ENEMY_MUSK        = 8;
-            const OPPONENT          = 16;
+            const WALL              = 1; // can collide with bots
+            // host musks
+            const NEUTRAL_MUSK      = 2; // discover a neutral host
+            const FRIENDLY_MUSK     = 4; // discover a friendly host
+            const ENEMY_MUSK        = 8; // discover an enemy host
+            // opponent musks
+            const OPPONENT          = 16; // discover an opponent bot
+
             // customized musk
-            const HOST_TYPE         = 3;
+            const HOST_TYPE         = 3; // any host has this type
         </script>
         <script type="text/javascript" charset="utf-8" src="util.js"></script>
         <script type="text/javascript" charset="utf-8" src="hinder.js"></script>
@@ -55,7 +64,7 @@
         <script type="text/javascript" charset="utf-8" src="udpGun.js"></script>
         <script type="text/javascript" charset="utf-8" src="scanner.js"></script>
         <script type="text/javascript" charset="utf-8" src="baseplayer.js"></script>
-        <script type="text/javascript" charset="utf-8" src="player.js"></script>
+        <script type="text/javascript" charset="utf-8" src="examplePlayer.js"></script>
         <script type="text/javascript" charset="utf-8">
             // create canvas element in body
             // canvas for background and hosts
@@ -87,14 +96,14 @@
                 [25,25], [34,26], [32,32], [26,34]
             ]);
 
-            var player = new Player("purple");
-            // var adversery = new BasePlayer("blue", [200,200], -135);
+            var player = new ExamplePlayer("purple");
+            var adversery = new BasePlayer("blue", [790,790], 180);
 
             playground.addPlayer(player);
+            playground.addPlayer(adversery);
 
             playground.render();
             playground.start();
-
         </script>
 </body>
 </html>

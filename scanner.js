@@ -25,6 +25,5 @@ class Scanner extends Weapon {
                 break;
         }
         this.owner.scannerInfo = scannerInfo;
-        // console.log(this.owner.scannerInfo);
     }
 }

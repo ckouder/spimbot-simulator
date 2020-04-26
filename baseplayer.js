@@ -31,7 +31,7 @@ class BasePlayer {
             [BasePlayer.PUZZLE_INT] : undefined,
             [BasePlayer.RESPAWN_INT]: undefined,
         };
-        this.updateEdges();
+        // this.updateEdges();
         this.initialize();
         // proxy enables us to detect and handle interruptions 
         // before each player property access, in a way that 
@@ -42,14 +42,10 @@ class BasePlayer {
     observer() {
         return new Proxy(this, {
             get(player, property, receiver) {
-                if (property === "wait") {
-                    // clear time handler before set a new timer
-                    // so that the previous handler won't be executed
-                    player.interruptions[BasePlayer.TIMER_INT] = undefined;
-                }
                 for (let interruptionMusk of Object.keys(player.interruptions)) {
                     let interruptionHandler = player.interruptions[interruptionMusk];
                     if (typeof(interruptionHandler) === "function") {
+                        // make sure the function applies to the player class, not the proxy
                         interruptionHandler.apply(player);
                         player.interruptions[interruptionMusk] = {};
                     }
@@ -59,30 +55,47 @@ class BasePlayer {
         });
     }
 
+    /**
+     * set angle of the bot
+     */
     set angle(angle) {
         this.angleInDeg = angle;
     }
 
+    /**
+     * get angle in radians
+     */
     get angleInRad() {
         return Util.degToRad(this.angle);
     }
 
+    /**
+     * get angle in degrees
+     */
     get angle() {
         return this.angleInDeg;
     }
 
+    /**
+     * get the location of the bot in playground.
+     * the location is at center of the bot.
+     */
     get location() {
         return Util.toGridCoord(this.exactLocation);
     }
 
-    updateEdges() {
-        for (let i = 0; i < BasePlayer.EDGE_NUM; i++) {
-            let o = [...this.exactLocation];
-            o[0] += Math.floor(Math.sin(Math.PI*2 / (i + 1)) * BasePlayer.SIZE);
-            o[1] += Math.floor(Math.cos(Math.PI*2 / (i + 1)) * BasePlayer.SIZE);
-            this.edges[i] = o;
-        }
-    }
+    /**
+     * update the boundary box of the bot
+     * deprecated because in fact we don't need it
+     */
+    // updateEdges() {
+    //     for (let i = 0; i < BasePlayer.EDGE_NUM; i++) {
+    //         let o = [...this.exactLocation];
+    //         o[0] += Math.floor(Math.sin(Math.PI*2 / (i + 1)) * BasePlayer.SIZE);
+    //         o[1] += Math.floor(Math.cos(Math.PI*2 / (i + 1)) * BasePlayer.SIZE);
+    //         this.edges[i] = o;
+    //     }
+    // }
 
     /** set angle of the player bot
      * angle degree must be within -360 to 360 
@@ -135,40 +148,59 @@ class BasePlayer {
         return this.score;
     }
 
+    /**
+     * increase your score
+     * @param {int} val increase score by this much
+     */
+    incScore(val) {
+        this.score += val;
+    }
+
+
+    /**
+     * get the bot exact location after cycle number
+     * @param {*} cycle step num to calculate
+     */
+    futureStepLocation(cycle = 1) {
+        return [
+            this.exactLocation[0] + Math.sin(this.angleInRad) * this.speed * cycle,
+            this.exactLocation[1] + Math.cos(this.angleInRad) * this.speed * cycle,
+        ]
+    }
+
+    /**
+     * check if a future move is possible.
+     */
     possibleToMove() {
-        const COE = 1;
+        // calculate COE step forwards if the bot collides with walls
         if (this.speed === 0) { return true; }
-        let destination = [
-            this.exactLocation[0] + Math.sin(this.angleInRad) * this.speed,
-            this.exactLocation[1] + Math.cos(this.angleInRad) * this.speed,
-        ];
+
+        let destination = this.futureStepLocation();
         let gridDest = Util.toGridCoord(destination);
         if (Util.playground.isEmptyGround(gridDest)) {
             return true;
+
         } else if (Util.playground.isWall(gridDest)) {
             this.prepareBonk();
-            let dest = Util.toGridCoord([
-                this.exactLocation[0] + Math.sin(this.angleInRad) * this.speed * COE,
-                this.exactLocation[1] + Math.cos(this.angleInRad) * this.speed * COE,
-            ]);
+            // check if the bonk handler really solve the problem
+            let dest = Util.toGridCoord(this.futureStepLocation());
             if (Util.playground.isWall(dest)) { return false; }
         }
         return true;
     }
 
+    /**
+     * move the spimbot
+     */
     move() {
         this.exactLocation[0] += Math.sin(this.angleInRad) * this.speed;
         this.exactLocation[1] += Math.cos(this.angleInRad) * this.speed;
     }
 
-    bonk() {
-        this.speed = 0;
-    }
-
-    wait(time, task) {
-        this.interruptions[BasePlayer.TIMER_INT] = setTimeout.bind(window, task, time);
-    }
-
+    /**
+     * check if the bot is at the coord, including size of the bot
+     * @param {array} exactCoord 
+     */
     isAt(exactCoord) {
         return exactCoord[0] > (this.exactLocation[0] - BasePlayer.SIZE) 
             && exactCoord[0] < (this.exactLocation[0] + BasePlayer.SIZE)
@@ -176,24 +208,53 @@ class BasePlayer {
             && exactCoord[1] < (this.exactLocation[1] + BasePlayer.SIZE);
     }
 
+    /**
+     * fire! 
+     */
     shootUDP() {
         if (this.bytecoin < UdpGun.COST) { return; }
         this.udpGun.shoot();
         this.bytecoin -= UdpGun.COST;
     }
 
+    /**
+     * knock, knock
+     */
     shootScanner() {
         if (this.bytecoin < Scanner.COST) { return; }
         this.scanner.shoot();
         this.bytecoin -= Scanner.COST;
     }
 
-    prepareBonk() {
-        this.interruptions[BasePlayer.BONK_INT] = this.bonk;
+    /**
+     * get opponent hint from your host friends.
+     * get -1 if you don't have any.
+     */
+    fetchOpponentHint() {
+        let hosts = Util.playground.getHostsByAttitude(Host.FRIEND, this);
+        if (!Object.keys(hosts).length) { return -1; }
+        let opponentLocation = Util.playground.getOpponentGridLocation(this);
+        this.opponentHint = Util.playground.getNearestHostTo(opponentLocation, 0, hosts);
     }
 
+/* -------------------- Prepare for interruption handling ------------------- */
+
+    prepare(type, handler) {
+        this.interruptions[type] = handler;
+    }
+
+    /**
+     * prepare to handle the bonk interruption
+     */
+    prepareBonk() {
+        this.prepare(BasePlayer.BONK_INT, this.bonk);
+    }
+
+    /**
+     * prepare to handle the respawn interruption
+     */
     prepareRespawn() {
-        this.interruptions[BasePlayer.RESPAWN_INT] = function() {
+        this.prepare(BasePlayer.RESPAWN_INT, function() {
             let hosts                  = Util.playground.getHostsByAttitude(Host.FRIEND, this);
             if (!Object.keys(hosts).length) { hosts = Util.playground.getHostsByAttitude(Host.NEUTRAL, this); }
             if (!Object.keys(hosts).length) { hosts = Util.playground.getHostsByAttitude(Host.ENEMY, this); }
@@ -207,46 +268,96 @@ class BasePlayer {
             ];
             this.speed = 0;
             this.respawn();
-        };
+        });
     }
 
-    requestPuzzle() {
-        this.interruptions[BasePlayer.PUZZLE_INT] = function() {
+    /**
+     * prepare to handle the getPuzzle interruption
+     * fake puzzle requesting because I don't want to
+     * implement
+     */
+    preparePuzzle() {
+        this.prepare(BasePlayer.PUZZLE_INT, function() {
             this.getPuzzle();
-        };
+        });
     }
 
-    getPuzzle() {
-        console.log("Puzzle is ready!");
+    /**
+     * execute task after x ms.
+     * @param {int} time 
+     * @param {function} task 
+     */
+    prepareTimer(time, task) {
+        this.prepare(BasePlayer.TIMER_INT, setTimeout.bind(
+            window, 
+            typeof(task) === "function" ? task : this.task, 
+            time));
+    }
+    
+    /**
+     * alias of prepareTimer
+     */
+    wait(time, task) {
+        this.prepareTimer(time, task);
     }
 
+    /**
+     * I assume you did it correctly
+     */
     submitPuzzle() {
         this.bytecoin += PUZZLE_REWARD;
     }
 
-    fetchOpponentHint() {
-        let hosts = Util.playground.getHostsByAttitude(Host.FRIEND, this);
-        if (!Object.keys(hosts).length) { return -1; }
-        let opponentLocation = Util.playground.getOpponentGridLocation(this);
-        this.opponentHint = Util.playground.getNearestHostTo(opponentLocation, 0, hosts);
+/* ---------------------- Default Interruption Handlers --------------------- */
+
+    /**
+     * default bonk handler 
+     */
+    bonk() {
+        this.speed = 0;
+        console.log("You crash, man!");
     }
 
+    /**
+     * default timer handler
+     */
+    task() {
+        console.log("Times up!");
+    }
+
+    /**
+     * default respawn handler
+     */
     respawn() {
         console.log("Make me great again!");
     }
 
-    incScore(val) {
-        this.score += val;
+    /**
+     * default puzzle ready handler
+     */
+    getPuzzle() {
+        console.log("Puzzle is ready!");
     }
 
+/* ------------------- End Default Interruptions Handlers ------------------- */
+
+    /**
+     * do once when initialized, never again even respawn
+     */
     initialize() {
         console.log("do something once here");
     }
 
+    /**
+     * put your smart calculations here
+     */
     repeat() {
         console.log("Contemplating ...");
     }
 
+    /**
+     * draw the bot on playground
+     */
     render() {
         this.repeat();
         if (this.possibleToMove()) {
