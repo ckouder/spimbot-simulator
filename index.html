@@ -1,0 +1,100 @@
+<!DOCTYPE html>
+<html> 
+    <head>
+        <meta http-equiv="content-type" content="text/html; charset=utf-8">
+        <title>SpimBot Simulator</title>
+        <style>
+            #background, #activeLayer {
+                position: absolute;
+                top:      0px;
+                left:     0px;
+                margin-top: 10px;
+                margin-left: 10px;
+            }
+        </style>
+    </head>
+    <body>
+        <canvas id="background" height="800" width="800"></canvas>
+        <canvas id="activeLayer" height="800" width="800"></canvas>
+        <script type="text/javascript" charset="utf-8">
+            const PLAYERS_NUM       = 2;
+            const HOSTS_NUM         = 10;
+            const GRID_NUM          = 40;
+            const CANVAS_SIZE       = 800;
+            const GRID_SIZE         = CANVAS_SIZE / GRID_NUM;
+            
+            const HINDER_AREA_LEN   = 4;
+            const HINDER_AREA_SIZE  = GRID_SIZE * HINDER_AREA_LEN;
+            const HINDER_COLOR      = "black";
+
+            const PLAYER_SIZE       = GRID_SIZE / 2;
+            const PLAYER_HIT_SCORE  = 15;
+            const HOST_HIT_SCORE    = 1;
+
+            const UDP_COST          = 50;
+            const SCANNER_COST      = 1;
+
+            const PUZZLE_REWARD     = 50;
+
+            const EMPTY_GROUND      = 0;
+            const WALL              = 1;
+            const NEUTRAL_MUSK      = 2;
+            const FRIENDLY_MUSK     = 4;
+            const ENEMY_MUSK        = 8;
+            const OPPONENT          = 16;
+            // customized musk
+            const HOST_TYPE         = 3;
+        </script>
+        <script type="text/javascript" charset="utf-8" src="util.js"></script>
+        <script type="text/javascript" charset="utf-8" src="hinder.js"></script>
+        <script type="text/javascript" charset="utf-8" src="updateable.js"></script>
+        <script type="text/javascript" charset="utf-8" src="playground.js"></script>
+        <script type="text/javascript" charset="utf-8" src="host.js"></script>
+        <script type="text/javascript" charset="utf-8" src="beam.js"></script>
+        <script type="text/javascript" charset="utf-8" src="weapon.js"></script>
+        <script type="text/javascript" charset="utf-8" src="udpGun.js"></script>
+        <script type="text/javascript" charset="utf-8" src="scanner.js"></script>
+        <script type="text/javascript" charset="utf-8" src="baseplayer.js"></script>
+        <script type="text/javascript" charset="utf-8" src="player.js"></script>
+        <script type="text/javascript" charset="utf-8">
+            // create canvas element in body
+            // canvas for background and hosts
+            var background    = document.getElementById("background");
+            //canvas for beams and players
+            var activeLayer    = document.getElementById("activeLayer");
+
+            // draw playground
+            Util.setup(background, activeLayer);
+            var playground = new Playground(background, GRID_NUM, HOSTS_NUM, PLAYERS_NUM);
+            var host       = new Host([10, 10]);
+
+            playground.placeHinders([
+                [8, 2], [15, 1], [19, 1], [28, 2],
+                [20, 6], [24, 6], [16, 7], [21, 10],
+                [2, 8], [34, 8], [30, 12], [30, 16],
+                [1, 15], [7, 16], [18, 18], [26, 15], 
+                [29, 20], [34, 17], [35, 21],
+                [2, 19], [6, 20], [6, 24], [10, 21],
+                [2, 28], [8, 34], [12, 30],
+                [16, 30], [15, 26], [20, 29], [21, 35], 
+                [28, 34], [34, 28], [17, 34]
+            ]);
+
+            playground.placeHosts([
+                [26,2], [33,6], [37,13], [27,12], 
+                [13,5], [7,7], [5,13], [14,14],
+                [2,26], [12,27], [13,37], [6,33],
+                [25,25], [34,26], [32,32], [26,34]
+            ]);
+
+            var player = new Player("purple");
+            // var adversery = new BasePlayer("blue", [200,200], -135);
+
+            playground.addPlayer(player);
+
+            playground.render();
+            playground.start();
+
+        </script>
+</body>
+</html>
